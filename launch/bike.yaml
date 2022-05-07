@@ -1,0 +1,12 @@
+# to be used with slider_publisher
+cmd:
+    type: std_msgs/Float32MultiArray
+    v: 
+        min: -1.2
+        max: 1.2
+        to: data[0]
+    beta_dot: 
+        min: -1.2
+        max: 1.2
+        to: data[1]
+        

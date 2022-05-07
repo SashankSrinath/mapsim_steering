@@ -1,0 +1,8 @@
+/**:
+    ros__parameters:
+        L: 1.
+        R: .4
+        front_wheel: front_wheel
+        rear_wheel: rear_wheel
+        front_steering: front_wheel_steering
+        rear_steering: rear_wheel_steering

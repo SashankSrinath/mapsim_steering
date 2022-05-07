@@ -1,0 +1,7 @@
+/**:
+    ros__parameters:
+        L: 1.39
+        R: 0.95
+        front_wheel: handlebar_to_frontwheel
+        rear_wheel: frame_to_backwheel
+        front_steering: frame_to_handlebar
