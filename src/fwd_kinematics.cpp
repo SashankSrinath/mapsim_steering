@@ -43,14 +43,15 @@ private:
 //      RCLCPP_INFO(this->get_logger(), "timer_callback"); // just to test
 
       auto message = geometry_msgs::msg::Twist();
-      message.linear.x = 0.1;
+
+     /* message.linear.x = 0.1;
       message.linear.y = 0.0;
       message.linear.z = 0.0;
       message.angular.x = 0.0;
       message.angular.y = 0.0;
-      message.angular.z = 0.1;
+      message.angular.z = 0.1; */
 
-      //message = twist_measure();
+      message = twist_measure();
 
       RCLCPP_INFO_ONCE(this->get_logger(), "\n\nPublishing: '%f'\n\n", message.linear.x);
 
@@ -81,11 +82,10 @@ private:
     geometry_msgs::msg::Twist twist_measure()
     {
         auto message = geometry_msgs::msg::Twist();
-        static float beta = 0.0;
-        static float beta_dot = beta_dot_control;
-
-        static float dt = 0.01; // 100 hz or 10ms
-        beta += dt*beta_dot;
+        float beta = beta_dot_control;
+       // static float beta_dot = beta_dot_control;
+       // static float dt = 0.001; // 100 hz or 10ms
+       //beta += dt*beta_dot;
 
         message.linear.x = v_control*cos(beta);
         message.linear.y = 0.0;
@@ -93,6 +93,11 @@ private:
         message.angular.x = 0.0;
         message.angular.y = 0.0;
         message.angular.z = v_control*sin(beta)/1.39; // L = 1.39
+
+        //RCLCPP_INFO(this->get_logger(), "\n\n beta control: '%f'\n\n", beta);
+        //RCLCPP_INFO(this->get_logger(), "\n\n linear x: '%f'\n\n", message.linear.x);
+        //RCLCPP_INFO(this->get_logger(), "\n\n Angluar z: '%f'\n\n", message.angular.z);
+
         return message;
     }
 
