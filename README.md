@@ -7,7 +7,7 @@ Parameters that can be updated in the launch file:
     - `cmd`: to use a slider GUI to control the high-level control
 
 To run a specific robot, run 
-```ros2 launch mapsim_steering simulation_launch.py robot:=bike``` for the(1,1) robot  
+```ros2 launch mapsim_steering simulation_launch.py robot:=bike``` for the(1,1) robot (or) 
 ```ros2 launch mapsim_steering simulation_launch.py robot:=two_steering``` for the(1,2) robot  
 
 The high-level command is published on `cmd` while the low-level twist is subscribed on `cmd_vel`. 
