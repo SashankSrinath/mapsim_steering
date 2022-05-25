@@ -1,6 +1,7 @@
 from simple_launch import SimpleLauncher
 from launch.substitutions import Command
 from os import system
+import sys
 
 def generate_launch_description():
     sl = SimpleLauncher()
@@ -11,7 +12,12 @@ def generate_launch_description():
     
     sl.robot_state_publisher('mapsim_steering', sl.name_join(sl.arg('robot'), '.urdf'), 'urdf')
     
-    sl.node('mapsim_steering', 'fwd_kinematics')
+    if sys.argv[4] == 'robot:=bike':
+        print('\nLaunching bike node...\n')
+        sl.node('mapsim_steering', 'bike_kinematics')
+    if sys.argv[4] == 'robot:=two_steering':
+        print('\nLaunching two steering node...\n')
+        sl.node('mapsim_steering', 'two_steering_kinematics')  
     
     with sl.group(if_arg='jsp'):
         sl.joint_state_publisher()

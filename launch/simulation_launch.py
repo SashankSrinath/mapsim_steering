@@ -20,10 +20,11 @@ def generate_launch_description():
     node_params['max_height'] = sl.arg('max_height')
     node_params['max_width'] = sl.arg('max_width')
     node_params['rate'] = sl.arg('rate')
+    
     sl.node('map_simulator', 'simulator', parameters = node_params, output='screen')
 	
     with sl.group(ns=sl.arg('robot')):  
-        sl.node('map_simulator', 'spawn', parameters = {'static_tf_odom': True, 'force_scanner' : False})
+        sl.node('map_simulator', 'spawn', parameters = {'static_tf_odom': True, 'force_scanner' : True})
         sl.include('mapsim_steering', 'steering_launch.py', launch_arguments=sl.arg_map(('robot', 'cmd', 'jsp')))
         
     sl.node('rviz2', 'rviz2', arguments=['-d', sl.find('mapsim_steering', 'config.rviz')],
