@@ -14,6 +14,8 @@
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
+#define L 1.39
+
 float v_control, beta_dot_control;
 
 class bike_kinematics_node : public rclcpp::Node
@@ -77,13 +79,14 @@ private:
        // static float beta_dot = beta_dot_control;
        // static float dt = 0.001; // 100 hz or 10ms
        //beta += dt*beta_dot;
+        float theta = 0.0;
 
-        message.linear.x = v_control*cos(beta);
-        message.linear.y = 0.0;
+        message.linear.x = v_control * cos(theta) * cos(beta);
+        message.linear.y = v_control * sin(theta) * cos(beta);
         message.linear.z = 0.0;
         message.angular.x = 0.0;
         message.angular.y = 0.0;
-        message.angular.z = v_control*sin(beta)/1.39; // L = 1.39
+        message.angular.z = v_control*sin(beta)/L; // L = 1.39
 
         return message;
     }

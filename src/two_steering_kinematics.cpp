@@ -14,8 +14,10 @@
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
+#define L 1.0
 //std_msgs::msg::Float32MultiArray::SharedPtr get_msg;
-float v_control, beta_one_dot_control, beta_two_dot_control;
+float v1_control, beta_one_dot_control, beta_two_dot_control;
+float v2_control;
 
 class two_steering_kinematics_node : public rclcpp::Node
 {
@@ -41,13 +43,6 @@ private:
 
       auto message = geometry_msgs::msg::Twist();
 
-     /* message.linear.x = 0.1;
-      message.linear.y = 0.0;
-      message.linear.z = 0.0;
-      message.angular.x = 0.0;
-      message.angular.y = 0.0;
-      message.angular.z = 0.1; */
-
       message = twist_measure();
 
       RCLCPP_INFO_ONCE(this->get_logger(), "\n\nPublishing Twist message\n\n");
@@ -57,6 +52,8 @@ private:
 
       // --------------------------------------------------
 
+      v2_control = v1_control*cos(beta_one_dot_control)/cos(beta_two_dot_control);
+
       sensor_msgs::msg::JointState jointStateData;
       jointStateData.header.stamp = clock->now();
       jointStateData.name.push_back("front_wheel_steering");
@@ -64,9 +61,9 @@ private:
       jointStateData.name.push_back("rear_wheel_steering");
       jointStateData.name.push_back("rear_wheel");
       jointStateData.position.push_back(beta_one_dot_control);
-      jointStateData.position.push_back(v_control);
+      jointStateData.position.push_back(v1_control);
       jointStateData.position.push_back(beta_two_dot_control);
-      jointStateData.position.push_back(v_control);
+      jointStateData.position.push_back(v2_control);
 
       RCLCPP_INFO_ONCE(this->get_logger(), "\n\nPublishing joint state data \n\n");
 
@@ -76,7 +73,7 @@ private:
 
     void topic_callback(const std_msgs::msg::Float32MultiArray::SharedPtr msg) const
     {
-        v_control = msg->data[0];
+        v1_control = msg->data[0];
         beta_one_dot_control = msg->data[1];
         beta_two_dot_control = msg->data[2];
     }
@@ -84,19 +81,17 @@ private:
     geometry_msgs::msg::Twist twist_measure()
     {
         auto message = geometry_msgs::msg::Twist();
+
         float beta1 = beta_one_dot_control;
         float beta2 = beta_two_dot_control;
+        float theta = 0.0;
 
-       // static float beta_dot = beta_dot_control;
-       // static float dt = 0.001; // 100 hz or 10ms
-       //beta += dt*beta_dot;
-
-        message.linear.x = 0.1;
-        message.linear.y = 0.0;
+        message.linear.x = v1_control*cos(beta1)*cos(theta) - v2_control*sin(beta2)*sin(theta);
+        message.linear.y = v1_control*cos(beta1)*sin(theta) + v2_control*sin(beta2)*cos(theta);
         message.linear.z = 0.0;
         message.angular.x = 0.0;
         message.angular.y = 0.0;
-        message.angular.z = 0.1;
+        message.angular.z = 1/L*(v1_control*sin(beta1) - v2_control*sin(beta2));
 
         return message;
     }
