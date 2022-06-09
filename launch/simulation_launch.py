@@ -31,7 +31,7 @@ def generate_launch_description():
             remappings={'/robot_description': sl.name_join('/', sl.arg('robot'), '/robot_description')})
     
     sl.node('tf2_ros', 'static_transform_publisher', 'footprint', 
-            arguments=['0','0','0','0','0','0',sl.name_join(sl.arg('robot'), '/odom'), 'base_footprint'])
+            arguments=['0','0','0','0','0','0',sl.name_join(sl.arg('robot'), '/base_footprint'), 'base_footprint'])
 
 	
     return sl.launch_description()

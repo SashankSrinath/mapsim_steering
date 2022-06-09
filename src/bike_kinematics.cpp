@@ -14,9 +14,9 @@
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
-#define L 1.39
-
-float v_control, beta_dot_control;
+constexpr auto L{1.39};
+constexpr auto r{0.95};
+constexpr auto dt{0.01};
 
 class bike_kinematics_node : public rclcpp::Node
 {
@@ -25,13 +25,23 @@ public:
     : Node("bike_kinematics_node")
     {
         subscriber_ = create_subscription<std_msgs::msg::Float32MultiArray>("cmd", 1,
-                    std::bind(&bike_kinematics_node::topic_callback, this, _1));
+                                                                            [&](std_msgs::msg::Float32MultiArray::SharedPtr msg)
+        {
+                v_control = msg->data[0];
+                beta_dot_control= msg->data[1];
+    });
 
         publisher_  = this->create_publisher<geometry_msgs::msg::Twist>("/bike/cmd_vel", 1);
 
         publisher_jointState  = this->create_publisher<sensor_msgs::msg::JointState>("/bike/joint_states", 1);
 
         timer_ = create_wall_timer(10ms, std::bind(&bike_kinematics_node::timer_callback, this));
+
+        state.name.push_back("frame_to_handlebar");
+        state.name.push_back("handlebar_to_frontwheel");
+        state.name.push_back("frame_to_backwheel");
+        state.position = {0,0,0};
+
     }
 
 private:
@@ -42,54 +52,31 @@ private:
 
       auto message = geometry_msgs::msg::Twist();
 
-      message = twist_measure();
+      double &beta{state.position[0]};
+      beta += dt*beta_dot_control;
+
+      message.linear.x = v_control * cos(beta);
+      message.linear.y = 0.0;
+      message.linear.z = 0.0;
+      message.angular.x = 0.0;
+      message.angular.y = 0.0;
+      message.angular.z = v_control*sin(beta)/L; // L = 1.39
 
       RCLCPP_INFO_ONCE(this->get_logger(), "\n\nPublishing Twist message \n\n");
 
       publisher_->publish(message);
 
+      state.header.stamp = clock->now();
 
-      // --------------------------------------------------
-
-      sensor_msgs::msg::JointState jointStateData;
-      jointStateData.header.stamp = clock->now();
-      jointStateData.name.push_back("frame_to_handlebar");
-      jointStateData.name.push_back("handlebar_to_frontwheel");
-      jointStateData.name.push_back("frame_to_backwheel");
-      jointStateData.position.push_back(beta_dot_control);
-      jointStateData.position.push_back(v_control);
-      jointStateData.position.push_back(v_control);
+      state.position[1]+=dt*v_control/r;
+      state.position[2]+=dt*v_control*cos(beta)/r;
 
       RCLCPP_INFO_ONCE(this->get_logger(), "\n\nPublishing joint state data \n\n");
 
-      publisher_jointState->publish(jointStateData);
+      publisher_jointState->publish(state);
 
     }
 
-    void topic_callback(const std_msgs::msg::Float32MultiArray::SharedPtr msg) const
-    {
-        v_control = msg->data[0];
-        beta_dot_control = msg->data[1];
-    }
-
-    geometry_msgs::msg::Twist twist_measure()
-    {
-        auto message = geometry_msgs::msg::Twist();
-        float beta = beta_dot_control;
-       // static float beta_dot = beta_dot_control;
-       // static float dt = 0.001; // 100 hz or 10ms
-       //beta += dt*beta_dot;
-        float theta = 0.0;
-
-        message.linear.x = v_control * cos(theta) * cos(beta);
-        message.linear.y = v_control * sin(theta) * cos(beta);
-        message.linear.z = 0.0;
-        message.angular.x = 0.0;
-        message.angular.y = 0.0;
-        message.angular.z = v_control*sin(beta)/L; // L = 1.39
-
-        return message;
-    }
 
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_;
     rclcpp::TimerBase::SharedPtr timer_;
@@ -97,6 +84,9 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher_jointState;
     rclcpp::Clock::SharedPtr clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
+
+    float v_control, beta_dot_control;
+    sensor_msgs::msg::JointState state;
 };
 
 int main (int argc, char** argv)

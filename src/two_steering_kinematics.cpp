@@ -14,10 +14,9 @@
 using namespace std::chrono_literals;
 using std::placeholders::_1;
 
-#define L 1.0
-//std_msgs::msg::Float32MultiArray::SharedPtr get_msg;
-float v1_control, beta_one_dot_control, beta_two_dot_control;
-float v2_control;
+constexpr auto L{1.0};
+constexpr auto r{0.4};
+constexpr auto dt{0.01};
 
 class two_steering_kinematics_node : public rclcpp::Node
 {
@@ -26,13 +25,26 @@ public:
     : Node("two_steering_kinematics_node")
     {
         subscriber_ = create_subscription<std_msgs::msg::Float32MultiArray>("cmd", 1,
-                    std::bind(&two_steering_kinematics_node::topic_callback, this, _1));
+                                                                            [&](std_msgs::msg::Float32MultiArray::SharedPtr msg)
+        {
+                v1_control = msg->data[0];
+                beta_one_dot_control = msg->data[1];
+                beta_two_dot_control = msg->data[2];
+
+    });
 
         publisher_  = this->create_publisher<geometry_msgs::msg::Twist>("/two_steering/cmd_vel", 1);
 
         publisher_jointState  = this->create_publisher<sensor_msgs::msg::JointState>("/two_steering/joint_states", 1);
 
         timer_ = create_wall_timer(10ms, std::bind(&two_steering_kinematics_node::timer_callback, this));
+
+        state.name.push_back("front_wheel_steering");
+        state.name.push_back("front_wheel");
+        state.name.push_back("rear_wheel_steering");
+        state.name.push_back("rear_wheel");
+        state.position = {0,0,0,0};
+
     }
 
 private:
@@ -43,57 +55,37 @@ private:
 
       auto message = geometry_msgs::msg::Twist();
 
-      message = twist_measure();
+      double &beta_one{state.position[0]};
+      beta_one += dt*beta_one_dot_control;
+
+      double &beta_two{state.position[2]};
+      beta_two += dt*beta_two_dot_control;
+
+      float theta = 0.0;
+
+      message.linear.x = v1_control*cos(beta_one)*cos(theta) - v2_control*sin(beta_two)*sin(theta);
+      message.linear.y = v1_control*cos(beta_one)*sin(theta) + v2_control*sin(beta_two)*cos(theta);
+      message.linear.z = 0.0;
+      message.angular.x = 0.0;
+      message.angular.y = 0.0;
+      message.angular.z = 1/L*(v1_control*sin(beta_one) - v2_control*sin(beta_two));
+
 
       RCLCPP_INFO_ONCE(this->get_logger(), "\n\nPublishing Twist message\n\n");
 
       publisher_->publish(message);
 
+      v2_control = v1_control*cos(beta_one)/cos(beta_two);
 
-      // --------------------------------------------------
+      state.header.stamp = clock->now();
 
-      v2_control = v1_control*cos(beta_one_dot_control)/cos(beta_two_dot_control);
-
-      sensor_msgs::msg::JointState jointStateData;
-      jointStateData.header.stamp = clock->now();
-      jointStateData.name.push_back("front_wheel_steering");
-      jointStateData.name.push_back("front_wheel");
-      jointStateData.name.push_back("rear_wheel_steering");
-      jointStateData.name.push_back("rear_wheel");
-      jointStateData.position.push_back(beta_one_dot_control);
-      jointStateData.position.push_back(v1_control);
-      jointStateData.position.push_back(beta_two_dot_control);
-      jointStateData.position.push_back(v2_control);
+      state.position[1]+=dt*v1_control/r;
+      state.position[3]+=dt*v2_control/r;
 
       RCLCPP_INFO_ONCE(this->get_logger(), "\n\nPublishing joint state data \n\n");
 
-      publisher_jointState->publish(jointStateData);
+      publisher_jointState->publish(state);
 
-    }
-
-    void topic_callback(const std_msgs::msg::Float32MultiArray::SharedPtr msg) const
-    {
-        v1_control = msg->data[0];
-        beta_one_dot_control = msg->data[1];
-        beta_two_dot_control = msg->data[2];
-    }
-
-    geometry_msgs::msg::Twist twist_measure()
-    {
-        auto message = geometry_msgs::msg::Twist();
-
-        float beta1 = beta_one_dot_control;
-        float beta2 = beta_two_dot_control;
-        float theta = 0.0;
-
-        message.linear.x = v1_control*cos(beta1)*cos(theta) - v2_control*sin(beta2)*sin(theta);
-        message.linear.y = v1_control*cos(beta1)*sin(theta) + v2_control*sin(beta2)*cos(theta);
-        message.linear.z = 0.0;
-        message.angular.x = 0.0;
-        message.angular.y = 0.0;
-        message.angular.z = 1/L*(v1_control*sin(beta1) - v2_control*sin(beta2));
-
-        return message;
     }
 
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_;
@@ -102,6 +94,9 @@ private:
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher_jointState;
     rclcpp::Clock::SharedPtr clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
+
+    float v1_control, beta_one_dot_control,v2_control, beta_two_dot_control;
+    sensor_msgs::msg::JointState state;
 };
 
 int main (int argc, char** argv)
