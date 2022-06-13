@@ -6,7 +6,7 @@ def generate_launch_description():
     sl = SimpleLauncher()
     
     sl.declare_arg('robot', default_value='bike')
-    sl.declare_arg('cmd', default_value=True)
+    sl.declare_arg('cmd', default_value=False)
     sl.declare_arg('jsp', default_value=False)
     
     sl.declare_arg('map', default_value=sl.find('map_simulator', 'house.yaml'))

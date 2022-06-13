@@ -12,7 +12,7 @@
 #include <std_msgs/msg/float32.hpp>
 
 using namespace std::chrono_literals;
-using std::placeholders::_1;
+//using std::placeholders::_1;
 
 constexpr auto L{1.0};
 constexpr auto r{0.4};

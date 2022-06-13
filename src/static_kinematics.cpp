@@ -18,24 +18,30 @@ constexpr auto L{1.39};
 constexpr auto r{0.95};
 constexpr auto dt{0.01};
 
-class bike_kinematics_node : public rclcpp::Node
+class static_kinematics_node : public rclcpp::Node
 {
 public:
-    bike_kinematics_node()
-    : Node("bike_kinematics_node")
+    static_kinematics_node()
+    : Node("static_kinematics_node")
     {
-        subscriber_ = create_subscription<std_msgs::msg::Float32MultiArray>("cmd", 1,
-                                                                            [&](std_msgs::msg::Float32MultiArray::SharedPtr msg)
+        subscriber_v = create_subscription<std_msgs::msg::Float32>("/bike/feedback_control_v", 1,
+                                                                            [&](std_msgs::msg::Float32::SharedPtr v_msg)
         {
-                v_control = msg->data[0];
-                beta_dot_control= msg->data[1];
+            v_control = v_msg->data;
+
+    });
+        subscriber_betaDot = create_subscription<std_msgs::msg::Float32>("/bike/feedback_control_betaDot", 1,
+                                                                            [&](std_msgs::msg::Float32::SharedPtr betaDot_msg)
+        {
+            beta_dot_control = betaDot_msg->data;
+
     });
 
         publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("/bike/cmd_vel", 1);
 
         publisher_jointState = this->create_publisher<sensor_msgs::msg::JointState>("/bike/joint_states", 1);
 
-        timer_ = create_wall_timer(10ms, std::bind(&bike_kinematics_node::timer_callback, this));
+        timer_ = create_wall_timer(10ms, std::bind(&static_kinematics_node::timer_callback, this));
 
         state.name.push_back("frame_to_handlebar");
         state.name.push_back("handlebar_to_frontwheel");
@@ -78,7 +84,8 @@ private:
     }
 
 
-    rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr subscriber_v;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr subscriber_betaDot;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr timer_jointState;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
@@ -92,7 +99,7 @@ private:
 int main (int argc, char** argv)
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<bike_kinematics_node>());
+  rclcpp::spin(std::make_shared<static_kinematics_node>());
   rclcpp::shutdown();
   return 0;
 }
