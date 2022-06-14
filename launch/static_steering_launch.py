@@ -11,17 +11,9 @@ def generate_launch_description():
     sl.declare_arg('cmd', default_value=False)
     
     sl.robot_state_publisher('mapsim_steering', sl.name_join(sl.arg('robot'), '.urdf'), 'urdf')
-    
-    if len(sys.argv) == 4:
-        print('\nLaunching bike node by default...\n')
-        sl.node('mapsim_steering', 'bike_kinematics')
-    else:  
-        if sys.argv[4] == 'robot:=bike':
-            print('\nLaunching bike node...\n')
-            sl.node('mapsim_steering', 'bike_kinematics')
-        if sys.argv[4] == 'robot:=two_steering':
-            print('\nLaunching two steering node...\n')
-            sl.node('mapsim_steering', 'two_steering_kinematics') 
+
+    sl.node('mapsim_steering', 'static_kinematics')
+    sl.node('mapsim_steering', 'static_feedback') 
     
     with sl.group(if_arg='jsp'):
         sl.joint_state_publisher()

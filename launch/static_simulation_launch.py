@@ -6,14 +6,14 @@ def generate_launch_description():
     sl = SimpleLauncher()
     
     sl.declare_arg('robot', default_value='bike')
-    sl.declare_arg('cmd', default_value=True)
+    sl.declare_arg('cmd', default_value=False)
     sl.declare_arg('jsp', default_value=False)
     
     sl.declare_arg('map', default_value=sl.find('map_simulator', 'house.yaml'))
     sl.declare_arg('max_height', default_value=800)
     sl.declare_arg('max_width', default_value=1200)
     sl.declare_arg('rate', default_value=20)
-    sl.declare_arg('map_server', default_value=True)
+    sl.declare_arg('map_server', default_value=False)
     
     node_params = {}
     node_params['map'] = sl.arg('map')
@@ -25,7 +25,7 @@ def generate_launch_description():
 	
     with sl.group(ns=sl.arg('robot')):  
         sl.node('map_simulator', 'spawn', parameters = {'static_tf_odom': True, 'force_scanner' : True})
-        sl.include('mapsim_steering', 'steering_launch.py', launch_arguments=sl.arg_map(('robot', 'cmd', 'jsp')))
+        sl.include('mapsim_steering', 'static_steering_launch.py', launch_arguments=sl.arg_map(('robot', 'cmd', 'jsp')))
         
     sl.node('rviz2', 'rviz2', arguments=['-d', sl.find('mapsim_steering', 'config.rviz')],
             remappings={'/robot_description': sl.name_join('/', sl.arg('robot'), '/robot_description')})
