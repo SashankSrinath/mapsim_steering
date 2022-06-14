@@ -16,11 +16,14 @@ using namespace std::chrono_literals;
 //using std::placeholders::_1;
 
 constexpr auto L{1.39};
-constexpr auto dt{0.00001};
+constexpr auto dt{0.00001}; //0000001
 constexpr auto d{0.5};
-constexpr auto a{10};
+constexpr auto a{100};
+constexpr auto kp{1};
 
 float current_beta;
+float current_x,current_y;
+auto message = std_msgs::msg::Float32MultiArray();
 
 class static_feedback_node : public rclcpp::Node
 {
@@ -36,15 +39,17 @@ public:
         subscriber_odom = create_subscription<nav_msgs::msg::Odometry>("/bike/odom", 1,
                                                                             [&](nav_msgs::msg::Odometry::SharedPtr od_msg)
         {
+        current_x = od_msg->pose.pose.position.x;
+        current_y = od_msg->pose.pose.position.y;
 
     });
 
-
-
-        publisher_feedback_v = this->create_publisher<std_msgs::msg::Float32>("/bike/feedback_control_v", 1);
-        publisher_feedback_betaDot = this->create_publisher<std_msgs::msg::Float32>("/bike/feedback_control_betaDot", 1);
+        publisher_feedback = this->create_publisher<std_msgs::msg::Float32MultiArray>("/bike/feedback_control", 1);
 
         timer_ = create_wall_timer(10ms, std::bind(&static_feedback_node::timer_callback, this));
+
+        message.data = {0.0,0.0};
+        angle = 0.0; x = 0; y = 0; xp = 0; yp = 0; x_dot = 0; y_dot = 0;
 
     }
 
@@ -54,43 +59,50 @@ private:
         x =  a * cos(angle);
         y =  a * sin(angle);
 
-        angle += dt;
-        if (angle > 2*M_PI){angle = 0.0;}
-
         x_dot = a * sin(angle);
         y_dot = a * cos(angle);
 
-        xp = x + d*cos(current_beta);
-        yp = y + d*sin(current_beta);
+        angle += dt;
+        if (angle > 2*M_PI){angle = 0.0;}
 
-        K = {{cos(current_beta) - d/L*v_control*sin(current_beta)*sin(current_beta),   -d*sin(current_beta)},
-             {sin(current_beta) + d/L*v_control*cos(current_beta)*sin(current_beta),    d*cos(current_beta)}};
+        xp = current_x + d*cos(current_beta);
+        yp = current_y + d*sin(current_beta);
 
-        det_K = K[0][0]*K[1][1]-K[0][1]*K[1][0];
+        x_error = x - xp;
+        y_error = y - yp;
+
+        K = {{cos(current_beta) - d/L*sin(current_beta)*sin(current_beta),   -d*sin(current_beta)},
+             {sin(current_beta) + d/L*cos(current_beta)*sin(current_beta),    d*cos(current_beta)}};
+
+        det_K = K[0][0]*K[1][1] - K[0][1]*K[1][0];
 
         inv_K = {{  K[1][1]/det_K, -K[0][1]/det_K},
                  { -K[1][0]/det_K,  K[0][0]/det_K}};
 
-        v_control = inv_K[0][0]*x_dot + inv_K[0][1]*y_dot;
-        beta_dot_control = inv_K[1][0]*x_dot + inv_K[1][1]*y_dot;
+        v_control = (inv_K[0][0]*(x_dot+ kp*x_error)) + (inv_K[0][1]*(y_dot+kp*y_error));
 
-    auto message_v = std_msgs::msg::Float32();
-    message_v.data = v_control;
-    publisher_feedback_v->publish(message_v);
+        beta_dot_control = (inv_K[1][0]*(x_dot + kp*x_error)) + (inv_K[1][1]*(y_dot+kp*y_error));
 
-    auto message_betaDot = std_msgs::msg::Float32();
-    message_betaDot.data = beta_dot_control;
-    publisher_feedback_betaDot->publish(message_betaDot);
+
+        if (v_control>1.2){v_control = 1.2;}
+        if (v_control<-1.2){v_control = -1.2;}
+
+        if (beta_dot_control>1.2){beta_dot_control = 1.2;}
+        if (beta_dot_control<-1.2){beta_dot_control = -1.2;}
+
+        message.data[0] = v_control;
+        message.data[1] = beta_dot_control;
+        publisher_feedback->publish(message);
+
     }
 
 
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr subscriber_jointState;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscriber_odom;
     rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr publisher_feedback_v;
-    rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr publisher_feedback_betaDot;
+    rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr publisher_feedback;
     rclcpp::Clock::SharedPtr clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
-    double v_control, beta_dot_control, angle, det_K,x, y, xp, yp, x_dot, y_dot;
+    double v_control, beta_dot_control, angle, det_K,x, y, xp, yp, x_dot, y_dot,x_error, y_error;
     std::vector<std::vector<double>> K, inv_K;
 
 };

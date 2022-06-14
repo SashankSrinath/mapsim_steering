@@ -24,16 +24,11 @@ public:
     static_kinematics_node()
     : Node("static_kinematics_node")
     {
-        subscriber_v = create_subscription<std_msgs::msg::Float32>("/bike/feedback_control_v", 1,
-                                                                            [&](std_msgs::msg::Float32::SharedPtr v_msg)
+        subscriber = create_subscription<std_msgs::msg::Float32MultiArray>("/bike/feedback_control", 1,
+                                                                            [&](std_msgs::msg::Float32MultiArray::SharedPtr msg)
         {
-            v_control = v_msg->data;
-
-    });
-        subscriber_betaDot = create_subscription<std_msgs::msg::Float32>("/bike/feedback_control_betaDot", 1,
-                                                                            [&](std_msgs::msg::Float32::SharedPtr betaDot_msg)
-        {
-            beta_dot_control = betaDot_msg->data;
+            v_control = msg->data[0];
+            beta_dot_control = msg->data[1];
 
     });
 
@@ -83,9 +78,7 @@ private:
 
     }
 
-
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr subscriber_v;
-    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr subscriber_betaDot;
+    rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr timer_jointState;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
