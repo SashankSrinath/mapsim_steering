@@ -12,7 +12,7 @@ using namespace std::chrono_literals;
 constexpr auto L{1.39};
 constexpr auto dt{0.00001};
 constexpr auto d{0.5};
-constexpr auto a{-100};
+constexpr auto a{100};
 constexpr auto kp{1};
 
 class static_feedback_node : public rclcpp::Node
