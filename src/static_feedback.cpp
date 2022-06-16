@@ -1,11 +1,6 @@
-// Publisher for the 'cmd_vel'(Twist) topic. Subscribed by the simulation
-// Publisher fo the joint states ( sensor_msgs). Subscribed
-// Subscribes to the 'cmd' topic (float32MultiArray) published by the slider_publisher
-
 #include <iostream>
 #include <rclcpp/rclcpp.hpp>
 #include <chrono>
-//#include <memory>
 #include <geometry_msgs/msg/twist.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
@@ -13,17 +8,12 @@
 #include <nav_msgs/msg/odometry.hpp>
 
 using namespace std::chrono_literals;
-//using std::placeholders::_1;
 
 constexpr auto L{1.39};
-constexpr auto dt{0.00001}; //0000001
+constexpr auto dt{0.00001};
 constexpr auto d{0.5};
-constexpr auto a{100};
+constexpr auto a{-100};
 constexpr auto kp{1};
-
-float current_beta;
-float current_x,current_y;
-auto message = std_msgs::msg::Float32MultiArray();
 
 class static_feedback_node : public rclcpp::Node
 {
@@ -83,7 +73,6 @@ private:
 
         beta_dot_control = (inv_K[1][0]*(x_dot + kp*x_error)) + (inv_K[1][1]*(y_dot+kp*y_error));
 
-
         if (v_control>1.2){v_control = 1.2;}
         if (v_control<-1.2){v_control = -1.2;}
 
@@ -92,10 +81,10 @@ private:
 
         message.data[0] = v_control;
         message.data[1] = beta_dot_control;
+
         publisher_feedback->publish(message);
 
     }
-
 
     rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr subscriber_jointState;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subscriber_odom;
@@ -103,8 +92,9 @@ private:
     rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr publisher_feedback;
     rclcpp::Clock::SharedPtr clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
     double v_control, beta_dot_control, angle, det_K,x, y, xp, yp, x_dot, y_dot,x_error, y_error;
+    double current_beta, current_x,current_y;
     std::vector<std::vector<double>> K, inv_K;
-
+    std_msgs::msg::Float32MultiArray message;
 };
 
 int main (int argc, char** argv)

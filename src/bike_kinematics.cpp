@@ -1,18 +1,16 @@
 // Publisher for the 'cmd_vel'(Twist) topic. Subscribed by the simulation
-// Publisher fo the joint states ( sensor_msgs). Subscribed
+// Publisher fo the joint states ( sensor_msgs).
 // Subscribes to the 'cmd' topic (float32MultiArray) published by the slider_publisher
 
 #include <iostream>
 #include <rclcpp/rclcpp.hpp>
 #include <chrono>
-//#include <memory>
 #include <geometry_msgs/msg/twist.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
 #include <std_msgs/msg/float32.hpp>
 
 using namespace std::chrono_literals;
-//using std::placeholders::_1;
 
 constexpr auto L{1.39};
 constexpr auto r{0.95};
@@ -48,8 +46,6 @@ private:
     void timer_callback()
     {
 
-//      RCLCPP_INFO(this->get_logger(), "timer_callback"); // just to test
-
       auto message = geometry_msgs::msg::Twist();
 
       double &beta{state.position[0]};
@@ -67,7 +63,6 @@ private:
       publisher_->publish(message);
 
       state.header.stamp = clock->now();
-
       state.position[1]+=dt*v_control/r;
       state.position[2]+=dt*v_control*cos(beta)/r;
 
@@ -77,16 +72,14 @@ private:
 
     }
 
-
     rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr subscriber_;
     rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::TimerBase::SharedPtr timer_jointState;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr publisher_jointState;
     rclcpp::Clock::SharedPtr clock = std::make_shared<rclcpp::Clock>(RCL_ROS_TIME);
-
     float v_control, beta_dot_control;
     sensor_msgs::msg::JointState state;
+
 };
 
 int main (int argc, char** argv)
