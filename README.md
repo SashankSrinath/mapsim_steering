@@ -1,4 +1,4 @@
-# Forwards kinematics of steering-wheels robots
+# Simulation of steering-wheels robots
 
 In this project, a map based simulator is improved for ROS2 to simulate two types of robots : (1,1) robot and (1,2) robot, both of which are steering wheeled robots.
 Intermediary nodes have been developed that will receive the control inputs (which are the forward and the steering velocities) and these inputs are transformed into the necessary twist according to the kinematic model of the desired robot and published. 
